@@ -1,0 +1,26 @@
+{
+  "microsoft_vscode-pull-request-github": {
+    "pr_count": 1126,
+    "unique_authors": 45,
+    "unique_reviewers": 64,
+    "total_reviews": 1958
+  },
+  "astral-sh_ruff": {
+    "pr_count": 5529,
+    "unique_authors": 416,
+    "unique_reviewers": 234,
+    "total_reviews": 15728
+  },
+  "streamlit_streamlit": {
+    "pr_count": 2742,
+    "unique_authors": 219,
+    "unique_reviewers": 83,
+    "total_reviews": 9856
+  },
+  "fastapi_fastapi": {
+    "pr_count": 1130,
+    "unique_authors": 429,
+    "unique_reviewers": 121,
+    "total_reviews": 940
+  }
+}
