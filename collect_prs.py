@@ -34,7 +34,7 @@ BOT_ACCOUNTS = {
     "dependabot", "github-actions", "copilot", "renovate",
     "pre-commit-ci", "codecov", "google-wombot",
     "copilot-pull-request-reviewer", "copilot-swe-agent",
-    "astral-sh-bot", "snyk-io", "codspeed-hq", "cursor",
+    "astral-sh-bot", "snyk-io","cursor",
     "askdevai-bot", "ercbot", "klim4-bot",
 }
 
