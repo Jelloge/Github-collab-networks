@@ -6,7 +6,9 @@ from collections import defaultdict
 DATA_DIR = "data"
 OUT_DIR = "networks"
 
-#explicit bot block
+# explicit denylist of service/automation accounts
+# using exact usernames only (no substring matching) to avoid
+# accidentally removing real users like cassiobotaro
 BLOCKLIST = {
     "copilot-pull-request-reviewer",
     "copilot-swe-agent",
@@ -15,6 +17,17 @@ BLOCKLIST = {
     "codspeed-hq",
     "renovate-bot",
     "google-wombot",
+    # these were missing and showing up in edge lists
+    "github-actions",
+    "dependabot",
+    "pre-commit-ci",
+    "renovate",
+    "copilot",
+    "codecov",
+    "askdevai-bot",
+    "ercbot",
+    "klim4-bot",
+    "cursor",
 }
 
 #labels that usually mean its a dependency/automated PR
@@ -28,9 +41,12 @@ REPO_FILES = {
 }
 
 
-def is_blocked(login):
-    """check if a login should be filtered out"""
+def is_blocked(login, is_bot_flag=False):
+    """check if a login should be filtered out.
+    uses both the explicit denylist and the is_bot flag already tagged in the json"""
     if not login:
+        return True
+    if is_bot_flag:
         return True
     lower = login.lower()
     if lower.endswith("[bot]"):
@@ -126,12 +142,12 @@ def build_edges(prs, review_weight=1, comment_weight=1):
 
     for pr in prs:
         author = pr.get("author")
-        if not author or is_blocked(author):
+        if not author or is_blocked(author, pr.get("author_is_bot", False)):
             continue
         #reviews -> author
         for r in pr.get("reviews", []):
             reviewer = r.get("login")
-            if not reviewer or is_blocked(reviewer):
+            if not reviewer or is_blocked(reviewer, r.get("is_bot", False)):
                 continue
             if reviewer == author:
                 continue  # skip self-reviews
@@ -139,26 +155,28 @@ def build_edges(prs, review_weight=1, comment_weight=1):
         # comments -> author
         for c in pr.get("comments", []):
             commenter = c.get("login")
-            if not commenter or is_blocked(commenter):
+            if not commenter or is_blocked(commenter, c.get("is_bot", False)):
                 continue
             if commenter == author:
                 continue  # skip self-comments
             edges[(commenter, author)] += comment_weight
     return edges
+
+
 def get_all_users(prs):
     """get set of all non-bot users who appear in any role"""
     users = set()
     for pr in prs:
         author = pr.get("author")
-        if author and not is_blocked(author):
+        if author and not is_blocked(author, pr.get("author_is_bot", False)):
             users.add(author)
         for r in pr.get("reviews", []):
             login = r.get("login")
-            if login and not is_blocked(login):
+            if login and not is_blocked(login, r.get("is_bot", False)):
                 users.add(login)
         for c in pr.get("comments", []):
             login = c.get("login")
-            if login and not is_blocked(login):
+            if login and not is_blocked(login, c.get("is_bot", False)):
                 users.add(login)
     return users
 def write_edges_csv(edges, filepath):
