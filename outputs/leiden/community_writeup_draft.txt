@@ -1,0 +1,11 @@
+Community detection used an undirected weighted projection of the directed collaboration network. For each pair of contributors, we summed interaction weights in both directions to represent overall collaboration intensity. We then ran Leiden community detection with the RBConfigurationVertexPartition objective and edge weights preserved.
+
+Community validation combined structural output with repository metadata from the underlying pull requests. For the largest communities in each repository, we compared member overlap with recurring directories and PR labels to check whether detected groups aligned with recognizable work areas or contributor subdomains.
+
+Robustness check comparing `review=1, comment=1` against `review=2, comment=1` Leiden runs:
+- vscode-pr-github: pairwise co-assignment agreement = 0.904, largest community share shift = 0.091, community count shift = -1
+- ruff: pairwise co-assignment agreement = 0.973, largest community share shift = 0.006, community count shift = +0
+- streamlit: pairwise co-assignment agreement = 0.791, largest community share shift = 0.039, community count shift = +1
+- fastapi: pairwise co-assignment agreement = 0.947, largest community share shift = 0.016, community count shift = +5
+
+Across the four repositories, community structure appears in every network, but concentration differs by project. vscode-pr-github has the most dominant largest community share (52.27%), while streamlit is comparatively more fragmented (40.77%). The robustness rerun suggests the broad community picture is stable when review interactions are weighted more heavily.

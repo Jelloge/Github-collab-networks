@@ -1,0 +1,5 @@
+repo,nodes,edges_undirected,num_communities,largest_community_size,largest_community_share
+fastapi,496,696,24,219,0.4415322580645161
+ruff,501,1154,7,230,0.4590818363273453
+streamlit,233,569,3,95,0.40772532188841204
+vscode-pr-github,88,187,8,46,0.5227272727272727
