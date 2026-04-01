@@ -1,0 +1,8 @@
+Bridge/core overlap uses the undirected weighted projection for the main edge definition.
+Core contributors are the top 10% of nodes by strength (minimum 5 nodes per repo), and bridge roles are the top nodes by betweenness using the same cutoff.
+Overlap is reported as counts, shares, and Jaccard similarity.
+
+- fastapi: overlap=20 of top 55 (core share=36.36%, bridge share=37.04%, Jaccard=0.225)
+- ruff: overlap=29 of top 51 (core share=56.86%, bridge share=56.86%, Jaccard=0.397)
+- streamlit: overlap=11 of top 22 (core share=50.00%, bridge share=50.00%, Jaccard=0.333)
+- vscode-pr-github: overlap=5 of top 9 (core share=55.56%, bridge share=55.56%, Jaccard=0.385)

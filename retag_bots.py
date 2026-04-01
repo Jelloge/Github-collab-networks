@@ -22,6 +22,10 @@ BOT_ACCOUNTS = {
     "askdevai-bot",
     "ercbot",
     "klim4-bot",
+    "azure-pipelines",
+    "github-advanced-security",
+    "github-code-quality",
+    "graphite-app",
 }
 
 # these ppl have "bot" in their username but theyre actually humans lol

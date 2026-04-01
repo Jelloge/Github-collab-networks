@@ -28,6 +28,10 @@ BLOCKLIST = {
     "ercbot",
     "klim4-bot",
     "cursor",
+    "azure-pipelines",
+    "github-advanced-security",
+    "github-code-quality",
+    "graphite-app",
 }
 
 #labels that usually mean its a dependency/automated PR

@@ -944,7 +944,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2026-03-25T18:00:14Z",
-        "is_bot": false
+        "is_bot": true
       },
       {
         "login": "alexr00",
@@ -954,7 +954,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2026-03-27T12:02:27Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -2367,7 +2367,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2026-02-17T08:58:36Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -4436,7 +4436,7 @@
         "login": "github-advanced-security",
         "state": "COMMENTED",
         "submittedAt": "2026-01-26T10:28:06Z",
-        "is_bot": false
+        "is_bot": true
       },
       {
         "login": "alexr00",
@@ -4448,7 +4448,7 @@
         "login": "github-advanced-security",
         "state": "COMMENTED",
         "submittedAt": "2026-01-26T10:53:09Z",
-        "is_bot": false
+        "is_bot": true
       },
       {
         "login": "alexr00",
@@ -10774,7 +10774,7 @@
         "login": "github-advanced-security",
         "state": "COMMENTED",
         "submittedAt": "2025-11-20T11:33:19Z",
-        "is_bot": false
+        "is_bot": true
       },
       {
         "login": "bpasero",
@@ -11328,7 +11328,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-11-17T11:51:13Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -11470,7 +11470,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-11-14T11:01:46Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -12100,7 +12100,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-11-10T10:27:05Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -12905,7 +12905,7 @@
         "login": "github-advanced-security",
         "state": "COMMENTED",
         "submittedAt": "2025-10-31T14:39:42Z",
-        "is_bot": false
+        "is_bot": true
       },
       {
         "login": "kycutler",
@@ -14201,7 +14201,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-10-20T11:51:34Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -16679,7 +16679,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-10-07T09:15:15Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -18740,7 +18740,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-10-06T10:47:38Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -25325,7 +25325,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-08-08T10:01:47Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -36580,7 +36580,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-06-23T13:56:33Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -37271,7 +37271,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-10-06T10:47:59Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -37692,7 +37692,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-05-08T10:20:10Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -39426,7 +39426,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2026-03-03T13:58:35Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -39491,7 +39491,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-04-22T16:32:14Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [
@@ -39540,7 +39540,7 @@
       {
         "login": "azure-pipelines",
         "createdAt": "2025-04-22T14:23:34Z",
-        "is_bot": false
+        "is_bot": true
       }
     ],
     "files": [

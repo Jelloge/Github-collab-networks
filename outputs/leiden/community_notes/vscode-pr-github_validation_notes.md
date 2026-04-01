@@ -1,11 +1,11 @@
 # vscode-pr-github community validation notes
 
 ## Community 0
-- Size: 46 nodes
+- Size: 52 nodes
 - High-strength members: alexr00, Tyriar, lszomoru, bpasero, dmitrivMS
-- Dominant directories/files touched: src/github (1711), webviews (688), src/view (597), resources (408), package.json (369)
+- Dominant directories/files touched: src/github (1723), webviews (692), src/view (596), resources (408), package.json (371)
 - Dominant labels: dependencies (22), javascript (22), candidate (5), bug (3), papercut :drop_of_blood: (3)
-- Interpretation: this cluster likely reflects collaborators converging around the areas above across 1601 PR involvements.
+- Interpretation: this cluster likely reflects collaborators converging around the areas above across 1611 PR involvements.
 
 ## Community 1
 - Size: 24 nodes
@@ -15,8 +15,8 @@
 - Interpretation: this cluster likely reflects collaborators converging around the areas above across 530 PR involvements.
 
 ## Community 2
-- Size: 8 nodes
-- High-strength members: kabel, azure-pipelines, vicky1999, bendrucker, ipcjs
-- Dominant directories/files touched: src/github (35), src/common (11), webviews (10), package.json (6), package.nls.json (6)
+- Size: 2 nodes
+- High-strength members: JanKoszewski, alexr000
+- Dominant directories/files touched: README.md (2)
 - Dominant labels: none
-- Interpretation: this cluster likely reflects collaborators converging around the areas above across 28 PR involvements.
+- Interpretation: this cluster likely reflects collaborators converging around the areas above across 2 PR involvements.

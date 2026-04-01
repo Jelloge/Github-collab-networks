@@ -36,6 +36,8 @@ SCHEMES = {
 
 TOP_NETWORK_REPOS = {"ruff", "vscode-pr-github", "streamlit", "fastapi"}
 TOP_N_NODES = 40
+ROLE_TOP_FRAC = 0.1
+ROLE_TOP_MIN = 5
 SEED = 42
 
 
@@ -115,6 +117,71 @@ def write_outputs(repo: str, scheme: str, graph: ig.Graph, membership, strengths
     sizes_path = OUT_DIR / "tables" / f"community_sizes_{repo}{scheme_suffix}.csv"
     sizes.to_csv(sizes_path, index=False)
     return communities, sizes, communities_path, sizes_path
+
+
+def compute_role_metrics(graph: ig.Graph) -> pd.DataFrame:
+    n = graph.vcount()
+    top_k = min(n, max(ROLE_TOP_MIN, math.ceil(n * ROLE_TOP_FRAC)))
+    role_df = pd.DataFrame(
+        {
+            "node": graph.vs["name"],
+            "strength": graph.strength(weights=graph.es["weight"]),
+            "degree": graph.degree(),
+            "betweenness": graph.betweenness(weights=graph.es["weight"], directed=False),
+        }
+    )
+    role_df["strength_rank"] = role_df["strength"].rank(method="min", ascending=False).astype(int)
+    role_df["betweenness_rank"] = role_df["betweenness"].rank(method="min", ascending=False).astype(int)
+    role_df["is_core_strength"] = role_df["strength_rank"] <= top_k
+    role_df["is_bridge_betweenness"] = role_df["betweenness_rank"] <= top_k
+    role_df["is_bridge_and_core"] = role_df["is_core_strength"] & role_df["is_bridge_betweenness"]
+    return role_df.sort_values(["strength_rank", "betweenness_rank", "node"])
+
+
+def summarize_role_overlap(repo: str, role_df: pd.DataFrame):
+    top_core = set(role_df.loc[role_df["is_core_strength"], "node"])
+    top_bridge = set(role_df.loc[role_df["is_bridge_betweenness"], "node"])
+    overlap = top_core & top_bridge
+    union = top_core | top_bridge
+    summary = {
+        "repo": repo,
+        "top_k": int(len(top_core)),
+        "core_count": int(len(top_core)),
+        "bridge_count": int(len(top_bridge)),
+        "overlap_count": int(len(overlap)),
+        "overlap_share_of_core": float(len(overlap) / len(top_core)) if top_core else 0.0,
+        "overlap_share_of_bridge": float(len(overlap) / len(top_bridge)) if top_bridge else 0.0,
+        "jaccard_overlap": float(len(overlap) / len(union)) if union else 0.0,
+    }
+    top_overlap = role_df.loc[role_df["is_bridge_and_core"], ["node", "strength", "betweenness"]].copy()
+    top_overlap = top_overlap.sort_values(["betweenness", "strength", "node"], ascending=[False, False, True])
+    return summary, top_overlap
+
+
+def plot_role_scatter(repo: str, role_df: pd.DataFrame):
+    colors = role_df["is_bridge_and_core"].map({True: "#E45756", False: "#4C78A8"})
+    plt.figure(figsize=(8.8, 6.2))
+    plt.scatter(
+        role_df["strength"],
+        role_df["betweenness"] + 1e-9,
+        c=colors,
+        alpha=0.75,
+        s=36,
+    )
+
+    for row in role_df.nlargest(8, "betweenness").itertuples(index=False):
+        plt.annotate(row.node, (row.strength, row.betweenness + 1e-9), fontsize=8, alpha=0.85)
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Node strength")
+    plt.ylabel("Betweenness")
+    plt.title(f"{repo}: bridge vs core roles")
+    plt.tight_layout()
+    out = OUT_DIR / "figures" / f"bridge_core_scatter_{repo}.png"
+    plt.savefig(out, dpi=220)
+    plt.close()
+    return out
 
 
 def plot_size_distribution(repo: str, sizes: pd.DataFrame, scheme: str):
@@ -319,12 +386,31 @@ def write_method_text(summary: pd.DataFrame, robustness_rows: list[dict]):
     return out
 
 
+def write_role_notes(role_overlap_rows: list[dict]):
+    lines = [
+        "Bridge/core overlap uses the undirected weighted projection for the main edge definition.",
+        f'Core contributors are the top {int(ROLE_TOP_FRAC * 100)}% of nodes by strength (minimum {ROLE_TOP_MIN} nodes per repo), and bridge roles are the top nodes by betweenness using the same cutoff.',
+        "Overlap is reported as counts, shares, and Jaccard similarity.",
+        "",
+    ]
+    for row in sorted(role_overlap_rows, key=lambda item: item["repo"]):
+        lines.append(
+            f"- {row['repo']}: overlap={row['overlap_count']} of top {row['top_k']} "
+            f"(core share={row['overlap_share_of_core']:.2%}, bridge share={row['overlap_share_of_bridge']:.2%}, "
+            f"Jaccard={row['jaccard_overlap']:.3f})"
+        )
+    path = OUT_DIR / "bridge_core_writeup_draft.txt"
+    path.write_text("\n".join(lines), encoding="utf-8")
+    return path
+
+
 def main():
     ensure_dirs()
     os.environ.setdefault("MPLCONFIGDIR", str(OUT_DIR / ".mplconfig"))
 
     scheme_results = {}
     summary_rows = []
+    role_overlap_rows = []
 
     for repo in REPO_DATA:
         scheme_results[repo] = {}
@@ -351,6 +437,15 @@ def main():
             }
 
         main_sizes = scheme_results[repo]["main"]["sizes"]
+        role_df = compute_role_metrics(scheme_results[repo]["main"]["graph"])
+        role_path = OUT_DIR / "tables" / f"node_roles_{repo}.csv"
+        role_df.to_csv(role_path, index=False)
+        role_summary, top_overlap = summarize_role_overlap(repo, role_df)
+        top_overlap_path = OUT_DIR / "tables" / f"bridge_core_overlap_nodes_{repo}.csv"
+        top_overlap.to_csv(top_overlap_path, index=False)
+        role_scatter_path = plot_role_scatter(repo, role_df)
+        role_overlap_rows.append(role_summary)
+
         summary_rows.append(
             {
                 "repo": repo,
@@ -359,6 +454,8 @@ def main():
                 "num_communities": int(len(main_sizes)),
                 "largest_community_size": int(main_sizes.iloc[0]["size"]),
                 "largest_community_share": float(main_sizes.iloc[0]["share"]),
+                "bridge_core_jaccard": role_summary["jaccard_overlap"],
+                "bridge_core_overlap_share": role_summary["overlap_share_of_core"],
             }
         )
 
@@ -388,14 +485,20 @@ def main():
     robustness_df = pd.DataFrame(robustness_rows).sort_values("repo")
     robustness_path = OUT_DIR / "tables" / "robustness_comparison.csv"
     robustness_df.to_csv(robustness_path, index=False)
+    role_overlap_df = pd.DataFrame(role_overlap_rows).sort_values("repo")
+    role_overlap_path = OUT_DIR / "tables" / "bridge_core_overlap_summary.csv"
+    role_overlap_df.to_csv(role_overlap_path, index=False)
 
     draft_path = write_method_text(summary, robustness_rows)
+    role_draft_path = write_role_notes(role_overlap_rows)
 
     manifest = {
         "summary_table": str(summary_path),
         "cross_repo_figure": str(fig_path),
         "robustness_table": str(robustness_path),
         "draft_text": str(draft_path),
+        "bridge_core_table": str(role_overlap_path),
+        "bridge_core_draft": str(role_draft_path),
     }
     manifest_path = OUT_DIR / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
