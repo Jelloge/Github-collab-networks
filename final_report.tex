@@ -1,0 +1,246 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{array}
+
+\title{Repository Context and the Structure of Pull-Request Collaboration Networks}
+\author{Amna Shahbaz \and Jasmine Jamali}
+\date{April 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Open-source projects all use pull requests, code review, and discussion, but that does not mean they all organize collaboration in the same way. In this report, we look at four GitHub repositories and ask whether changing the repository changes the structure of the pull-request collaboration network. We build the same interaction graph for each repository and compare them using concentration measures, Leiden community detection, and overlap between bridge roles and core contributors. The repositories do not end up looking the same. They differ in how many communities appear, how large the biggest community becomes, and how much the main bridge contributors overlap with the people doing the most interaction overall. These results suggest that visible GitHub collaboration has different structural patterns across projects, even when the same graph-building rules are used for all of them.
+\end{abstract}
+
+\section{Introduction}
+Open-source software is usually talked about as collaborative work, but that word can hide a lot of variation. Some repositories seem to revolve around a small group of very visible maintainers. Others appear to spread work across several clusters of contributors who touch different parts of the project. GitHub is useful for studying that difference because pull requests leave behind a visible record of collaboration: who reviewed whose work, who commented, and where discussion accumulated. Prior work has already shown that pull requests are a central mechanism for contribution and review in modern open-source software \cite{gousios2014}. That makes them a good place to study collaboration as a network rather than only as a long list of events.
+
+We focus on four open-source repositories: \texttt{astral-sh/ruff}, \texttt{fastapi/fastapi}, \texttt{streamlit/streamlit}, and \texttt{microsoft/vscode-pull-request-github}. Our project is built around one question:
+
+\begin{quote}
+\textit{Does changing the repository change the structure of the pull-request collaboration network, as measured by concentration of activity, community structure, and overlap between bridge roles and core contributors?}
+\end{quote}
+
+Our null hypothesis is that changing the repository does not change these measured properties, and that any differences we observe are just random variation rather than repository-specific structure.
+
+We care about this question because collaboration structure affects how information moves, how work gets coordinated, and how dependent a project becomes on a small number of contributors. If repositories built around the same pull-request workflow still produce different network structures, then open-source collaboration is not just one generic pattern repeated everywhere. Instead, projects may differ in concentration, internal clustering, and reliance on bridge contributors in ways that matter for coordination and maintainability. A single review or comment does not say much on its own, but once those interactions are collected over a year, they can reveal larger organizational patterns.
+
+\section{Research Question and Hypotheses}
+In our analysis, the repository is the independent variable, and the network measurements are the dependent variables. In this setting:
+\begin{itemize}[leftmargin=1.5em]
+    \item the independent variable $X$ is the repository being studied;
+    \item the dependent variables $Y$ are measurable network outcomes derived from the pull-request interaction graph.
+\end{itemize}
+
+We focus on three kinds of outcomes:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{concentration of activity}, measured using strength concentration summaries such as Gini coefficients and top-share summaries;
+    \item \textbf{community structure}, measured using Leiden communities, the number of communities, and the share of contributors in the largest community;
+    \item \textbf{bridge/core overlap}, measured using overlap between top-strength contributors and top-betweenness contributors.
+\end{itemize}
+
+From that setup, we use two hypotheses:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Null hypothesis ($H_0$):} changing the repository does not change these measured network properties.
+    \item \textbf{Alternative hypothesis ($H_1$):} changing the repository changes one or more of these measured network properties.
+\end{itemize}
+
+\section{Related Work}
+There is already a strong research base for treating developer interaction networks as meaningful objects of study. Herbold et al.\ surveyed 255 developer-social-network papers and found that community structure, collaboration behavior, and contributor roles are among the most common themes in the literature \cite{herbold2021}. Hong et al.\ also showed that developer social networks change over time and can display project-specific topological behavior, including shifts in modularity and community paths after major project events \cite{hong2011}. Those papers matter here because they support the basic idea behind our project: software collaboration networks are not just descriptive byproducts. They can reveal real structure.
+
+The GitHub side of our model is grounded in prior work on pull requests and social coding. Dabbish et al.\ argued that GitHub's transparency allows developers to make social inferences from visible activity traces, and that those inferences shape coordination, learning, and reputation-building \cite{dabbish2012}. Gousios et al.\ examined 291 projects and showed that pull-based development on GitHub is characterized by fast turnaround, broad opportunities for community engagement, and a relatively small set of factors associated with acceptance and processing time \cite{gousios2014}. Tsay et al.\ then showed that pull-request evaluation is not based on technical signals alone; social connection and prior interaction also matter for whether a contribution is accepted \cite{tsay2014}. In later work on extended pull-request discussions, Tsay, Dabbish, and Herbsleb found that those discussions often involve disagreement about both the problem being solved and the correctness of the proposed solution \cite{tsaydiscussion2014}. Yu et al.\ examined how multi-reviewing is associated with pull-request resolution in large GitHub OSS datasets, reinforcing the idea that review interactions are part of project coordination rather than just administrative metadata \cite{yu2019}. For our project, this literature is what justifies treating reviews and top-level pull-request discussion as meaningful social ties.
+
+The role part of our analysis also builds on prior work. Joblin et al.\ compared count-based and network-based classifications of core and peripheral developers and concluded that network metrics capture meaningful differences in contributor position \cite{joblin2017}. Crowston and Shamshurin similarly linked core-periphery communication patterns to open-source project success, suggesting that who occupies central versus peripheral positions matters for project health rather than only for description \cite{crowston2017}. That is why we compare high-strength contributors with high-betweenness contributors instead of treating ``core'' as a purely volume-based label.
+
+Finally, the community-detection step uses the Leiden algorithm, which Traag, Waltman, and van Eck introduced as an improvement over Louvain that guarantees better-connected communities \cite{traag2019}. In our report, Leiden is not the contribution. It is simply the method we use to detect substructure in a consistent way across repositories.
+
+This literature supports three pieces of our design: pull requests are an important collaboration mechanism on GitHub, developer interaction graphs can be studied structurally, and contributor roles can be measured with network-based methods rather than only simple activity counts. Our contribution is comparative rather than methodological. We apply one pull-request interaction model across four repositories and compare how concentration, community structure, and bridge/core overlap vary across them.
+
+\section{Model}
+We model each repository as a directed weighted graph. Each node is a contributor, and each edge represents a collaboration interaction on a pull request. A directed edge from contributor $u$ to contributor $v$ means that $u$ reviewed or commented on a pull request authored by $v$.
+
+Two interaction types are included:
+\begin{itemize}[leftmargin=1.5em]
+    \item submitted pull-request reviews;
+    \item top-level pull-request discussion comments.
+\end{itemize}
+
+Inline code review comments are excluded from the model, and self-interactions are removed as well. In the main analysis, submitted reviews and top-level comments each contribute weight 1. For the robustness check, reviews are assigned weight 2 while comments remain weight 1.
+
+This model is deliberately simplified. It captures visible collaboration recorded through pull requests, but it leaves out offline coordination, private chats, issue-only discussions, code ownership norms, and informal team hierarchy. In other words, it is not the full reality of software collaboration. We still think it is a useful abstraction because it preserves a comparable and observable interaction structure across repositories. For this project, that tradeoff is worth making: we care more about comparable ties and structural position than about detailed individual developer attributes.
+
+\section{Methodology}
+\subsection{Data Collection}
+We collected pull-request data for a rolling 12-month window from March 28, 2025 to March 28, 2026 using the GitHub GraphQL API. Pagination stopped once pull requests fell outside that window. We chose four repositories that offered noticeable cross-project variation while still being large enough to support meaningful network analysis. The final dataset covers \texttt{ruff}, \texttt{fastapi}, \texttt{streamlit}, and \texttt{vscode-pr-github}.
+
+\subsection{Bot Filtering and Network Construction}
+We filtered automation and service accounts using both GitHub bot flags and an explicit blocklist. After retagging and filtering, we generated directed weighted edge lists and node lists for each repository. In practice, this cleaning step mattered a lot. Without it, highly active automated accounts could easily drown out the human collaboration patterns we were actually trying to study.
+
+\subsection{Community and Role Analysis}
+For community detection, we built an undirected weighted projection by summing interaction weight in both directions for each contributor pair. We then applied Leiden community detection using weighted edges. To check that the resulting communities were not just artifacts of the algorithm, we compared the largest detected groups against recurring directories and labels from the underlying pull requests.
+
+To analyze contributor roles, we measured node strength and betweenness on the same undirected weighted projection. We defined core contributors as the top 10\% of nodes by strength, with a minimum of five nodes per repository, and bridge contributors as the top 10\% by betweenness under the same cutoff. We then measured overlap between these two sets to see whether the people doing the most interaction were also the ones connecting different parts of the network.
+
+\subsection{Experimental Design}
+Although this is a data-driven study rather than a simulation, the experimental design is still pretty direct. We keep the graph-construction rule fixed and vary the repository. For each repository, we:
+\begin{enumerate}[leftmargin=1.5em]
+    \item collect the same type of pull-request interaction data over the same time window;
+    \item construct the same directed weighted interaction graph;
+    \item derive the same undirected weighted projection for structural analysis;
+    \item measure the same concentration, community, and role-overlap outcomes;
+    \item repeat the community analysis under an alternate review-weighting rule as a robustness check.
+\end{enumerate}
+This design lets the repository act as the changing context while keeping the measurement pipeline comparable across all four cases.
+
+\subsection{Reproducibility Note}
+All analyses were run locally on a MacBook Pro laptop using Python-based data collection and graph-analysis scripts. We include enough methodological detail for another student to reconstruct the networks and rerun the analyses.
+
+\section{Results}
+Even under the same interaction model, the four repositories do not look structurally identical. Table~\ref{tab:summary} gives the clearest summary of that difference.
+
+\begin{table}[H]
+    \centering
+    \caption{Cross-repository summary of concentration, community structure, and bridge/core overlap.}
+    \label{tab:summary}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        Repository & Nodes & Strength Gini & Communities & Largest Community Share & Bridge/Core Jaccard \\
+        \midrule
+        fastapi & 496 & 0.728 & 24 & 0.442 & 0.225 \\
+        ruff & 501 & 0.918 & 7 & 0.459 & 0.397 \\
+        streamlit & 213 & 0.904 & 3 & 0.469 & 0.333 \\
+        vscode-pr-github & 86 & 0.797 & 7 & 0.605 & 0.385 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Concentration of Activity}
+The repositories differ not only in community structure, but also in how concentrated contributor activity is. Using node strength as a weighted activity measure, we find unequal participation in all four repositories, but the degree of inequality is not the same everywhere. The largest Gini coefficients appear in \texttt{ruff} and \texttt{streamlit}, which points to especially concentrated weighted activity, while \texttt{fastapi} is comparatively less unequal.
+
+The top-contributor shares point in the same direction. In \texttt{vscode-pr-github}, one especially active contributor accounts for a large fraction of total weighted activity, while in \texttt{ruff} and \texttt{streamlit}, concentration is spread more across a broader top contributor set. So the difference is not just ``more concentrated'' versus ``less concentrated.'' It is also a difference in shape: some repositories revolve around one especially dominant actor, while others concentrate activity across a small leading group.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{cross_repo_community_comparison.png}
+    \caption{Cross-repository comparison of the number of detected communities and the share of contributors contained in the largest community.}
+    \label{fig:cross-repo}
+\end{figure}
+
+Figure~\ref{fig:cross-repo} makes that pattern easier to see. \texttt{fastapi} has the largest number of communities, while \texttt{vscode-pr-github} has the most dominant largest community. So the repository seems to matter not only for how many clusters emerge, but also for how much collaboration gets concentrated inside the leading cluster.
+
+\subsection{Community Structure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\linewidth]{top_nodes_network_ruff_main.png}
+    \caption{Top contributors in the \texttt{ruff} collaboration network, colored by Leiden community.}
+    \label{fig:ruff-network}
+\end{figure}
+
+Figure~\ref{fig:ruff-network} shows a large but internally differentiated collaboration structure in \texttt{ruff}. The detected communities are visually distinct, but the network still revolves around a relatively small set of highly connected contributors.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.88\linewidth]{top_nodes_network_vscode-pr-github_main.png}
+    \caption{Top contributors in the \texttt{vscode-pr-github} collaboration network, colored by Leiden community.}
+    \label{fig:vscode-network}
+\end{figure}
+
+Figure~\ref{fig:vscode-network} shows a more concentrated structure in \texttt{vscode-pr-github}, which matches its larger dominant-community share. Relative to the other repositories, a larger fraction of contributors belong to one leading collaboration group.
+
+The validation step also suggests that these clusters are not arbitrary. In \texttt{ruff}, the largest communities align with repeated work in subdirectories such as \texttt{crates/ruff\_linter}, \texttt{crates/ty\_python\_semantic}, and related labeled work. Similar patterns appear in the other repositories through recurring directories, documentation areas, and testing-related regions of the codebase. Put more simply, the communities seem to correspond to real technical foci rather than random partitions produced by the algorithm.
+
+\subsection{Bridge Roles and Core Contributors}
+Bridge/core overlap differs across repositories as well. \texttt{ruff} shows the strongest overlap between bridge contributors and core contributors, while \texttt{fastapi} shows the weakest. This suggests that some repositories rely on contributors who are both central and cross-cutting, whereas others show a clearer separation between high-volume contributors and brokers linking different parts of the network.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.82\linewidth]{bridge_core_scatter_ruff.png}
+    \caption{Bridge/core role relationship in \texttt{ruff}. Nodes farther toward the upper-right combine high weighted activity with high betweenness.}
+    \label{fig:ruff-bridge-core}
+\end{figure}
+
+Figure~\ref{fig:ruff-bridge-core} illustrates this pattern in one of the repositories with the highest bridge/core overlap. Contributors in the upper-right portion of the plot occupy both high-strength and high-betweenness positions, meaning that they are not only highly active but also structurally important for connecting different parts of the collaboration network.
+
+\subsection{Robustness Check}
+Finally, the robustness rerun with heavier review weights produced broadly similar community assignments, especially for \texttt{ruff}, \texttt{fastapi}, and \texttt{vscode-pr-github}. This matters because review and comment weights are an analytical choice, and we do not want the whole story to depend on one arbitrary setting. The fact that the rerun stays close to the main analysis makes the main patterns easier to trust.
+
+\section{Discussion}
+Across the four repositories, we see measurable differences in collaboration structure. Even when we apply the same graph model everywhere, the resulting networks differ in concentration, community organization, and bridge/core overlap. That is enough to support the alternative hypothesis that changing the repository changes the structure of the pull-request collaboration network.
+
+From a network-science perspective, the interesting part is how small local interactions add up differently across repositories. Reviews and comments are contributor-to-author interactions at the level of individual pull requests, but once we aggregate them, they reveal different global structures. Some projects appear more centralized around a dominant cluster, while others are more fragmented or more modular. The role analysis points in the same direction: the contributors who occupy important bridging positions are not distributed the same way everywhere. Some repositories appear to rely more heavily on contributors whose positions connect otherwise separated parts of the network, while others show a tighter overlap between brokerage and core activity.
+
+We are not claiming that the repository name itself causes these patterns. More realistically, repository identity stands in for a bundle of project-specific features, such as maintainer organization, codebase specialization, review norms, and contributor mix. Even so, that bundle clearly matters enough to show up in the network structure.
+
+\section{Limitations}
+This study has several limitations. First, the graph includes only visible pull-request reviews and top-level discussion comments. It excludes private communication, issue-only interactions, inline review comments, and other forms of off-platform coordination. Second, repository context likely bundles together many hidden variables, such as team structure, governance, code ownership, and contributor experience. Third, the community validation process is interpretive: recurring directories and labels are useful clues, but they do not prove that contributors consciously organize around those foci. Finally, although the robustness analysis helps, other modeling choices could still affect the exact partitions and role assignments.
+
+\section{Conclusion}
+We asked whether changing the repository changes the structure of the pull-request collaboration network. Using the same interaction model across four open-source repositories, we found meaningful differences in community structure, concentration-related summaries, and overlap between bridge roles and core contributors. Visible GitHub collaboration is not structurally uniform across projects, even when the same network construction is used. Future work could extend this analysis with temporal snapshots, additional repositories, richer role measures, or comparisons against issue interactions and inline review comments.
+
+\section*{Progress Since Presentation}
+Since the presentation stage of the project, we extended the analysis in several ways. We completed the repository-wide data cleaning, updated the blocklist for automation and service accounts, regenerated the network files, and reran community detection after cleaning. We also finished the Leiden outputs for all repositories, added a robustness check with heavier review weighting, and completed the bridge/core overlap analysis using strength and betweenness. Those additions turned the presentation-stage results into a fuller cross-repository comparison with cleaner data and a more explicit role analysis.
+
+\begin{thebibliography}{99}
+
+\bibitem{gousios2014}
+G. Gousios, M. Pinzger, and A. van Deursen.
+\newblock An exploratory study of the pull-based software development model.
+\newblock In \textit{Proceedings of the 36th International Conference on Software Engineering}, pages 345--355, 2014.
+
+\bibitem{dabbish2012}
+L. A. Dabbish, H. C. Stuart, J. Tsay, and J. Herbsleb.
+\newblock Social coding in GitHub: transparency and collaboration in an open software repository.
+\newblock In \textit{Proceedings of the ACM 2012 Conference on Computer Supported Cooperative Work}, pages 1277--1286, 2012.
+
+\bibitem{hong2011}
+Q. Hong, S. Kim, S. C. Cheung, and C. Bird.
+\newblock Understanding a developer social network and its evolution.
+\newblock In \textit{Proceedings of the 27th IEEE International Conference on Software Maintenance}, pages 323--332, 2011.
+
+\bibitem{herbold2021}
+S. Herbold, A. Trautsch, and J. Grabowski.
+\newblock A systematic mapping study of developer social network research.
+\newblock \textit{Journal of Systems and Software}, 171:110802, 2021.
+
+\bibitem{joblin2017}
+M. Joblin, S. Apel, C. Hunsen, and W. Mauerer.
+\newblock Classifying developers into core and peripheral: an empirical study on count and network metrics.
+\newblock In \textit{Proceedings of the 39th International Conference on Software Engineering}, pages 164--174, 2017.
+
+\bibitem{crowston2017}
+K. Crowston and I. Shamshurin.
+\newblock Core-periphery communication and the success of free/libre open source software projects.
+\newblock \textit{Journal of Internet Services and Applications}, 8(10), 2017.
+
+\bibitem{tsay2014}
+J. Tsay, L. Dabbish, and J. Herbsleb.
+\newblock Influence of social and technical factors for evaluating contribution in GitHub.
+\newblock In \textit{Proceedings of the 36th International Conference on Software Engineering}, pages 356--366, 2014.
+
+\bibitem{tsaydiscussion2014}
+J. Tsay, L. Dabbish, and J. Herbsleb.
+\newblock Let's talk about it: Evaluating contributions through discussion in GitHub.
+\newblock In \textit{Proceedings of the 22nd ACM SIGSOFT International Symposium on Foundations of Software Engineering}, pages 144--154, 2014.
+
+\bibitem{yu2019}
+Z. Yu, M. Wang, X. Wang, and D. Lo.
+\newblock Multi-reviewing pull-requests: An exploratory study on GitHub OSS projects.
+\newblock \textit{Information and Software Technology}, 115:1--4, 2019.
+
+\bibitem{traag2019}
+V. A. Traag, L. Waltman, and N. J. van Eck.
+\newblock From Louvain to Leiden: guaranteeing well-connected communities.
+\newblock \textit{Scientific Reports}, 9:5233, 2019.
+
+\end{thebibliography}
+
+\end{document}
