@@ -6,7 +6,6 @@ import networkx as nx
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from scipy.stats import spearmanr
 
 OUT_DIR = "figures"
 os.makedirs(OUT_DIR, exist_ok=True)
@@ -20,6 +19,7 @@ REPOS = {
 
 
 def load_graph(path):
+    # read edge list csv and build a directed weighted graph
     G = nx.DiGraph()
     with open(path, encoding="utf-8") as f:
         for row in csv.DictReader(f):
@@ -28,6 +28,7 @@ def load_graph(path):
 
 
 def gini(values):
+    # standard gini formula, measures inequality in degree distribution
     v = np.array(sorted(values), dtype=float)
     n = len(v)
     if n == 0 or v.sum() == 0:
@@ -37,7 +38,7 @@ def gini(values):
 
 
 def top_pct_edge_share(G, pct=0.1):
-    """what fraction of total edge weight do the top pct% of nodes (by total degree) account for"""
+    # what share of total edge weight do the top pct% of nodes control?
     total_deg = {n: G.in_degree(n, weight="weight") + G.out_degree(n, weight="weight") for n in G.nodes()}
     sorted_nodes = sorted(total_deg.items(), key=lambda x: x[1], reverse=True)
     k = max(1, int(len(sorted_nodes) * pct))
@@ -55,7 +56,8 @@ def betweenness_analysis(G):
     total_bc = sum(bc.values())
     top5_share = sum(v for _, v in top5) / total_bc if total_bc > 0 else 0
 
-    # check overlap with top 10% by degree
+    # how many of the top 5% betweenness nodes are also in the top 10% by degree?
+    # this tells us if bridges are just popular or genuinely connecting groups
     total_deg = {n: G.in_degree(n) + G.out_degree(n) for n in G.nodes()}
     sorted_deg = sorted(total_deg.items(), key=lambda x: x[1], reverse=True)
     k_deg = max(1, int(len(sorted_deg) * 0.1))
@@ -66,19 +68,9 @@ def betweenness_analysis(G):
     return bc, top5_share, overlap, sorted_bc[:10]
 
 
-def hits_analysis(G):
-    hubs, authorities = nx.hits(G, max_iter=500, tol=1e-8)
-    top_hubs = sorted(hubs.items(), key=lambda x: x[1], reverse=True)[:10]
-    top_auths = sorted(authorities.items(), key=lambda x: x[1], reverse=True)[:10]
-    hub_set = {n for n, _ in top_hubs}
-    auth_set = {n for n, _ in top_auths}
-    overlap = len(hub_set & auth_set)
-    return hubs, authorities, top_hubs, top_auths, overlap
-
-
 def constraint_analysis(G, bc_sorted_top10):
-    """compute Burt's constraint for top 10 betweenness nodes"""
-    # nx.constraint works on undirected, convert
+    # burt's constraint -- lower = more structural holes = more brokerage power
+    # nx.constraint needs undirected graph
     U = G.to_undirected()
     constraints = nx.constraint(U)
     results = []
@@ -96,30 +88,25 @@ def print_table(headers, rows, col_width=20):
         print("".join(str(v).ljust(col_width) for v in row))
 
 
-# ============================================================
-# load all graphs
-# ============================================================
+# load all 4 graphs
 graphs = {}
 for name, path in REPOS.items():
     graphs[name] = load_graph(path)
     print(f"loaded {name}: {graphs[name].number_of_nodes()} nodes, {graphs[name].number_of_edges()} edges")
 
-# ============================================================
-# 1. basic network stats
-# ============================================================
+# --- 1. basic network stats ---
 print("\n" + "=" * 80)
 print("BASIC NETWORK STATS")
 print("=" * 80)
 
 basic_stats = {}
 headers = ["Metric", "vscode-pr-github", "ruff", "streamlit", "fastapi"]
-metrics = []
 
 for name, G in graphs.items():
     n = G.number_of_nodes()
     e = G.number_of_edges()
     density = nx.density(G)
-    # connected components on undirected version
+    # need undirected for connected components
     U = G.to_undirected()
     components = list(nx.connected_components(U))
     n_components = len(components)
@@ -145,14 +132,11 @@ for key, label in stat_keys:
 
 print_table(headers, rows)
 
-# ============================================================
-# 2. concentration analysis
-# ============================================================
+# --- 2. concentration analysis ---
 print("\n" + "=" * 80)
 print("CONCENTRATION ANALYSIS")
 print("=" * 80)
 
-# zipf plots
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
 concentration = {}
@@ -160,7 +144,7 @@ for name, G in graphs.items():
     in_degs = sorted([d for _, d in G.in_degree()], reverse=True)
     out_degs = sorted([d for _, d in G.out_degree()], reverse=True)
 
-    # filter zeros for log-log
+    # log-log plots need nonzero values
     in_nonzero = [d for d in in_degs if d > 0]
     out_nonzero = [d for d in out_degs if d > 0]
 
@@ -170,7 +154,6 @@ for name, G in graphs.items():
     ax1.loglog(ranks_in, in_nonzero, "o-", markersize=3, label=name, alpha=0.7)
     ax2.loglog(ranks_out, out_nonzero, "o-", markersize=3, label=name, alpha=0.7)
 
-    # gini on total degree
     all_degs = [G.in_degree(n) + G.out_degree(n) for n in G.nodes()]
     g = gini(all_degs)
     edge_share = top_pct_edge_share(G)
@@ -195,9 +178,7 @@ plt.savefig(f"{OUT_DIR}/zipf_degree_distributions.png", dpi=150)
 plt.close()
 print(f"saved {OUT_DIR}/zipf_degree_distributions.png")
 
-# ============================================================
-# 3. betweenness centrality
-# ============================================================
+# --- 3. betweenness centrality (bridge roles) ---
 print("\n" + "=" * 80)
 print("BETWEENNESS CENTRALITY")
 print("=" * 80)
@@ -216,32 +197,7 @@ for name, G in graphs.items():
     for node, val in top10_bc:
         print(f"    {node:30s} {val:.4f}")
 
-# ============================================================
-# 4. HITS
-# ============================================================
-print("\n" + "=" * 80)
-print("HITS ANALYSIS")
-print("=" * 80)
-
-hits_results = {}
-for name, G in graphs.items():
-    hubs, auths, top_hubs, top_auths, overlap = hits_analysis(G)
-    hits_results[name] = {
-        "hubs": hubs, "auths": auths,
-        "top_hubs": top_hubs, "top_auths": top_auths, "overlap": overlap,
-    }
-    print(f"\n{name}:")
-    print(f"  Top 10 Hubs:")
-    for node, val in top_hubs:
-        print(f"    {node:30s} {val:.6f}")
-    print(f"  Top 10 Authorities:")
-    for node, val in top_auths:
-        print(f"    {node:30s} {val:.6f}")
-    print(f"  Hub-Authority top-10 overlap: {overlap}/10")
-
-# ============================================================
-# 5. Burt's constraint for top 10 betweenness nodes
-# ============================================================
+# --- 4. Burt's constraint for top 10 betweenness nodes ---
 print("\n" + "=" * 80)
 print("BURT'S NETWORK CONSTRAINT (top 10 betweenness nodes)")
 print("=" * 80)
@@ -256,27 +212,7 @@ for name, G in graphs.items():
     for node, c in constraints:
         print(f"    {node:30s} {c:.4f}" if not math.isnan(c) else f"    {node:30s} NaN")
 
-# ============================================================
-# 6. Spearman correlation hub vs authority scores
-# ============================================================
-print("\n" + "=" * 80)
-print("SPEARMAN CORRELATION: Hub vs Authority scores")
-print("=" * 80)
-
-spearman_results = {}
-for name in REPOS:
-    hubs = hits_results[name]["hubs"]
-    auths = hits_results[name]["auths"]
-    nodes = list(hubs.keys())
-    hub_vals = [hubs[n] for n in nodes]
-    auth_vals = [auths[n] for n in nodes]
-    rho, pval = spearmanr(hub_vals, auth_vals)
-    spearman_results[name] = rho
-    print(f"  {name}: rho={rho:.4f}, p={pval:.2e}")
-
-# ============================================================
-# 7. cross-repo comparison table
-# ============================================================
+# --- 5. cross-repo comparison table ---
 print("\n" + "=" * 80)
 print("CROSS-REPO COMPARISON TABLE")
 print("=" * 80)
@@ -290,14 +226,13 @@ rows = [
     ["Gini coeff"] + [f"{concentration[n]['gini']:.3f}" for n in REPOS],
     ["Top-10% edge share"] + [f"{concentration[n]['top10_edge_share']:.1%}" for n in REPOS],
     ["Top-5% BC share"] + [f"{betweenness_results[n]['top5_share']:.1%}" for n in REPOS],
-    ["Hub-Auth overlap"] + [f"{hits_results[n]['overlap']}/10" for n in REPOS],
+    ["BC-degree overlap"] + [f"{betweenness_results[n]['deg_overlap']:.1%}" for n in REPOS],
     ["Avg constraint (top10 BC)"] + [f"{constraint_results[n]['avg']:.4f}" for n in REPOS],
-    ["Spearman hub-auth"] + [f"{spearman_results[n]:.4f}" for n in REPOS],
 ]
 
 print_table(headers, rows, col_width=22)
 
-# save comparison table as csv too
+# save as csv
 with open(f"{OUT_DIR}/cross_repo_comparison.csv", "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
     writer.writerow(headers)
