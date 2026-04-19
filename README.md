@@ -74,7 +74,7 @@ The project compares repository-level collaboration networks using:
 - Leiden community detection on undirected weighted projections;
 - bridge/core overlap using strength and betweenness centrality;
 - a robustness check where reviews are weighted more heavily than comments;
-- a quarterly temporal check to see whether important contributors remain stable across time.
+- a four-month temporal check to see whether important contributors remain stable across time.
 
 ## Outputs
 
@@ -83,5 +83,5 @@ Generated outputs include:
 - `networks/`: node and edge lists for each repository;
 - `figures/`: cross-repository plots and network visualizations;
 - `outputs/leiden/`: Leiden community outputs, role tables, validation notes, and robustness results;
-- `outputs/temporal/`: quarterly temporal analysis outputs;
+- `outputs/temporal/`: temporal analysis outputs;
 - `interactive/`: interactive HTML network visualizations.
