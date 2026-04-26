@@ -2,6 +2,8 @@
 
 Collaboration network analysis of GitHub pull request activity across four open-source repositories.
 
+Final Report: https://www.overleaf.com/read/mxyqhbyfqkbb#6d5363
+
 ## Authors
 
 - Amna Shahbaz
